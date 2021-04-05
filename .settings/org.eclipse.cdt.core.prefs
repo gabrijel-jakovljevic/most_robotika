@@ -52,7 +52,7 @@ environment/project/io.sloeber.core.toolChain.release.580723215/A.BUILD.MCU/oper
 environment/project/io.sloeber.core.toolChain.release.580723215/A.BUILD.MCU/value=atmega328p
 environment/project/io.sloeber.core.toolChain.release.580723215/A.BUILD.PATH/delimiter=;
 environment/project/io.sloeber.core.toolChain.release.580723215/A.BUILD.PATH/operation=replace
-environment/project/io.sloeber.core.toolChain.release.580723215/A.BUILD.PATH/value=C\:\\eclipse\\workspace\\Most_robotika\\Release
+environment/project/io.sloeber.core.toolChain.release.580723215/A.BUILD.PATH/value=C\:\\eclipse\\workspace\\most_robotika\\Release
 environment/project/io.sloeber.core.toolChain.release.580723215/A.BUILD.PROJECT_NAME/delimiter=;
 environment/project/io.sloeber.core.toolChain.release.580723215/A.BUILD.PROJECT_NAME/operation=replace
 environment/project/io.sloeber.core.toolChain.release.580723215/A.BUILD.PROJECT_NAME/value=${ProjName}
@@ -511,7 +511,7 @@ environment/project/io.sloeber.core.toolChain.release.580723215/JANTJE.PACKAGE_I
 environment/project/io.sloeber.core.toolChain.release.580723215/JANTJE.PACKAGE_ID/value=arduino
 environment/project/io.sloeber.core.toolChain.release.580723215/JANTJE.PROJECT_NAME/delimiter=;
 environment/project/io.sloeber.core.toolChain.release.580723215/JANTJE.PROJECT_NAME/operation=replace
-environment/project/io.sloeber.core.toolChain.release.580723215/JANTJE.PROJECT_NAME/value=Most_robotika
+environment/project/io.sloeber.core.toolChain.release.580723215/JANTJE.PROJECT_NAME/value=most_robotika
 environment/project/io.sloeber.core.toolChain.release.580723215/JANTJE.SELECTED.PLATFORM/delimiter=;
 environment/project/io.sloeber.core.toolChain.release.580723215/JANTJE.SELECTED.PLATFORM/operation=replace
 environment/project/io.sloeber.core.toolChain.release.580723215/JANTJE.SELECTED.PLATFORM/value=${eclipse_home}/arduinoPlugin/packages/arduino/hardware/avr/1.8.3
