@@ -12,19 +12,59 @@
 #define BR_0 A5
 
 #define ENTRY_SENSOR 2
-#define EXIST_SENSOR 4
+#define EXIT_SENSOR 4
+#define RISING_EDGE 1
+#define FALLING_EDGE 2
+#define EDGE_RESET 0
 
 #define RED 2
 #define GREEN 1
 #define OFF 0
 #define BRIDGEALLON 4
 
-long lastrun;
-byte traffic_state;
-byte entry_sensor_laststate;
-byte entry_sensor_currentstate;
+long lastrun_bridge;
 byte bridge_effect_state;
 boolean is_bridge_blinking = true;
+byte traffic_state;
+
+// entry sensor variables
+boolean entry_sensor_laststate;
+boolean entry_sensor_currentstate;
+byte entry_sensor_trigger = 0;
+
+// exit sensor variables
+boolean exit_sensor_laststate;
+boolean exit_sensor_currentstate;
+byte exit_sensor_trigger = 0;
+
+/*
+ * Control variable responsable for state of off all system.
+ *
+ * 10 - sensors 0 and 1 not interrupted, bridge lowered, bridge LEDs in 3-2-1 effect, traffic lights green					<-----
+ * 20 - sensor 0 interrupted, bidge lowered, bridge LEDs in 3-2-1 effect, traffic lights in alternative blinking (5s)			 |
+ * 30 - state of sensors irrelevant, bridge rising, bridge LEDs in all-blink effect, traffic lights red (until risen)			 |
+ * 40 - sensor states irrelevant, bridge risen, bidge LEDs in all-blink effect, traffic lights red (indefinitev)				 |
+ * 50 - when both sensors reconnect, bidge lowering, bidge LEDs in all-blink effect, traffic lights red						------
+ */
+byte control = 10;
+
+boolean read_sensor(byte sensor) {
+	// read and debounce sensor
+	while (true) {
+		if (digitalRead(sensor) == 1) {
+			//debounce
+			delay(10);
+			if (digitalRead(sensor) == 1) {
+				return true;
+			}
+		} else {
+			delay(10);
+			if (digitalRead(sensor) == 0) {
+				return false;
+			}
+		}
+	}
+}
 
 /*
  * Traffic lights control.
@@ -112,8 +152,8 @@ void setup() {
 	pinMode(BL_1, OUTPUT);
 	pinMode(BL_0, OUTPUT);
 	pinMode(ENTRY_SENSOR, INPUT);
-	pinMode(EXIST_SENSOR, OUTPUT);
-	lastrun = millis();
+	pinMode(EXIT_SENSOR, OUTPUT);
+	lastrun_bridge = millis();
 	traffic_ligths(GREEN);
 	bridge_effect(OFF);
 }
@@ -131,36 +171,40 @@ void loop() {
 	 */
 	delay(10);
 
-	// read and debounce sensor 0
-	if (digitalRead(ENTRY_SENSOR) == 1) {
-		//debounce
-		delay(10);
-		if (digitalRead(ENTRY_SENSOR) == 1) {
-			entry_sensor_currentstate = 1;
-		}
-	} else {
-		delay(10);
-		if (digitalRead(ENTRY_SENSOR) == 0) {
-			entry_sensor_currentstate = 0;
-		}
-	}
+	entry_sensor_currentstate = read_sensor(ENTRY_SENSOR);
 
 	// detect entry sensor state change
 	if (entry_sensor_laststate != entry_sensor_currentstate) {
 		entry_sensor_laststate = entry_sensor_currentstate;
-		if (entry_sensor_currentstate == 1) {
-			traffic_ligths(RED);
-			is_bridge_blinking = false;
-			bridge_effect(BRIDGEALLON);
+		if (entry_sensor_currentstate == true) {
+//			traffic_ligths(RED);
+//			is_bridge_blinking = false;
+//			bridge_effect(BRIDGEALLON);
+			entry_sensor_trigger = RISING_EDGE;
+
 		} else {
-			traffic_ligths(GREEN);
-			is_bridge_blinking = true;
+//			traffic_ligths(GREEN);
+//			is_bridge_blinking = true;
+//			control = 20;
 			// bridge_effect(OFF);
+			exit_sensor_trigger = FALLING_EDGE;
 		}
 	}
 
+	// detect exit sensor state change
+	if (exit_sensor_laststate != exit_sensor_currentstate) {
+		exit_sensor_laststate = exit_sensor_currentstate;
+		if (exit_sensor_currentstate == true) {
+			exit_sensor_trigger = RISING_EDGE;
+
+		} else {
+			exit_sensor_trigger = FALLING_EDGE;
+		}
+	}
+
+
 	// lowered state blinking
-	if (is_bridge_blinking && (millis() - lastrun > 1000)) {
+	if (is_bridge_blinking && (millis() - lastrun_bridge > 1000)) {
 		if (bridge_effect_state == 1) {
 			bridge_effect_state = 2;
 		} else if (bridge_effect_state == 2) {
@@ -169,15 +213,15 @@ void loop() {
 			bridge_effect_state = 1;
 		}
 		bridge_effect(bridge_effect_state);
-		lastrun = millis();
+		lastrun_bridge = millis();
 	}
-	if (!is_bridge_blinking && (millis() - lastrun > 1000)) {
+	if (!is_bridge_blinking && (millis() - lastrun_bridge > 1000)) {
 		if (bridge_effect_state == OFF) {
 			bridge_effect_state = BRIDGEALLON;
 		} else {
 			bridge_effect_state = OFF;
 		}
 		bridge_effect(bridge_effect_state);
-		lastrun = millis();
+		lastrun_bridge = millis();
 	}
 }
