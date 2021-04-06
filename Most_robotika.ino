@@ -1,16 +1,15 @@
-// primjer_0 - MLVC: M = most, L = lijevo, V = velika, C = crvena
-// primjer_1 - SZ:  = semafor, Z = zeleno
+// Naming:
+// BL: B = bridge, L = left
+// TLG:  = traffic light, G = green
 
-#define SZ 8
-#define SC 7
-#define MLVC_0 A0
-#define MLVC_1 A1
-#define MLVC_2 A2
-#define MDVC_2 A3
-#define MDVC_1 A4
-#define MDVC_0 A5
-#define SDMC 12
-#define SDMZ 13
+#define TLG 8
+#define TLR 7
+#define BL_0 A0
+#define BL_1 A1
+#define BL_2 A2
+#define BR_2 A3
+#define BR_1 A4
+#define BR_0 A5
 
 #define ENTRY_SENSOR 2
 #define EXIST_SENSOR 4
@@ -28,25 +27,25 @@ byte bridge_effect_state;
 boolean is_bridge_blinking = true;
 
 /*
- * Semafor kontrol funkcija.
+ * Traffic lights control.
  *
- * 0 - ugasi sve
- * 1 - zeleno
- * 2 - crveno
+ * 0 - all off
+ * 1 - green
+ * 2 - red
  */
 void traffic_ligths(byte mode) {
 	switch (mode) {
 		case 0:
-			digitalWrite(SC, LOW);
-			digitalWrite(SZ, LOW);
+			digitalWrite(TLR, LOW);
+			digitalWrite(TLG, LOW);
 			break;
 		case 1:
-			digitalWrite(SC, LOW);
-			digitalWrite(SZ, HIGH);
+			digitalWrite(TLR, LOW);
+			digitalWrite(TLG, HIGH);
 			break;
 		case 2:
-			digitalWrite(SC, HIGH);
-			digitalWrite(SZ, LOW);
+			digitalWrite(TLR, HIGH);
+			digitalWrite(TLG, LOW);
 			break;
 	}
 }
@@ -61,59 +60,57 @@ void traffic_ligths(byte mode) {
 void bridge_effect(byte mode) {
 	switch (mode) {
 		case 0:
-			digitalWrite(MLVC_0, LOW);
-			digitalWrite(MLVC_1, LOW);
-			digitalWrite(MLVC_2, LOW);
-			digitalWrite(MDVC_0, LOW);
-			digitalWrite(MDVC_1, LOW);
-			digitalWrite(MDVC_2, LOW);
+			digitalWrite(BL_0, LOW);
+			digitalWrite(BL_1, LOW);
+			digitalWrite(BL_2, LOW);
+			digitalWrite(BR_0, LOW);
+			digitalWrite(BR_1, LOW);
+			digitalWrite(BR_2, LOW);
 			break;
 		case 1:
-			digitalWrite(MLVC_0, HIGH);
-			digitalWrite(MLVC_1, LOW);
-			digitalWrite(MLVC_2, LOW);
-			digitalWrite(MDVC_0, HIGH);
-			digitalWrite(MDVC_1, LOW);
-			digitalWrite(MDVC_2, LOW);
+			digitalWrite(BL_0, HIGH);
+			digitalWrite(BL_1, LOW);
+			digitalWrite(BL_2, LOW);
+			digitalWrite(BR_0, HIGH);
+			digitalWrite(BR_1, LOW);
+			digitalWrite(BR_2, LOW);
 			break;
 		case 2:
-			digitalWrite(MLVC_0, LOW);
-			digitalWrite(MLVC_1, HIGH);
-			digitalWrite(MLVC_2, LOW);
-			digitalWrite(MDVC_0, LOW);
-			digitalWrite(MDVC_1, HIGH);
-			digitalWrite(MDVC_2, LOW);
+			digitalWrite(BL_0, LOW);
+			digitalWrite(BL_1, HIGH);
+			digitalWrite(BL_2, LOW);
+			digitalWrite(BR_0, LOW);
+			digitalWrite(BR_1, HIGH);
+			digitalWrite(BR_2, LOW);
 			break;
 		case 3:
-			digitalWrite(MLVC_0, LOW);
-			digitalWrite(MLVC_1, LOW);
-			digitalWrite(MLVC_2, HIGH);
-			digitalWrite(MDVC_0, LOW);
-			digitalWrite(MDVC_1, LOW);
-			digitalWrite(MDVC_2, HIGH);
+			digitalWrite(BL_0, LOW);
+			digitalWrite(BL_1, LOW);
+			digitalWrite(BL_2, HIGH);
+			digitalWrite(BR_0, LOW);
+			digitalWrite(BR_1, LOW);
+			digitalWrite(BR_2, HIGH);
 			break;
 		case 4:
-			digitalWrite(MLVC_0, HIGH);
-			digitalWrite(MLVC_1, HIGH);
-			digitalWrite(MLVC_2, HIGH);
-			digitalWrite(MDVC_0, HIGH);
-			digitalWrite(MDVC_1, HIGH);
-			digitalWrite(MDVC_2, HIGH);
+			digitalWrite(BL_0, HIGH);
+			digitalWrite(BL_1, HIGH);
+			digitalWrite(BL_2, HIGH);
+			digitalWrite(BR_0, HIGH);
+			digitalWrite(BR_1, HIGH);
+			digitalWrite(BR_2, HIGH);
 
 	}
 }
 
 void setup() {
-	pinMode(SDMZ, OUTPUT);
-	pinMode(SDMC, OUTPUT);
-	pinMode(SZ, OUTPUT);
-	pinMode(SC, OUTPUT);
-	pinMode(MDVC_2, OUTPUT);
-	pinMode(MDVC_1, OUTPUT);
-	pinMode(MDVC_0, OUTPUT);
-	pinMode(MLVC_2, OUTPUT);
-	pinMode(MLVC_1, OUTPUT);
-	pinMode(MLVC_0, OUTPUT);
+	pinMode(TLG, OUTPUT);
+	pinMode(TLR, OUTPUT);
+	pinMode(BR_2, OUTPUT);
+	pinMode(BR_1, OUTPUT);
+	pinMode(BR_0, OUTPUT);
+	pinMode(BL_2, OUTPUT);
+	pinMode(BL_1, OUTPUT);
+	pinMode(BL_0, OUTPUT);
 	pinMode(ENTRY_SENSOR, INPUT);
 	pinMode(EXIST_SENSOR, OUTPUT);
 	lastrun = millis();
