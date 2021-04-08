@@ -22,26 +22,41 @@
 #define OFF 0
 #define BRIDGEALLON 4
 
-long lastrun_bridge;
+// bridge
+unsigned long lastrun_bridge;
 byte bridge_effect_state;
-boolean is_bridge_blinking = true;
-byte traffic_state;
+boolean is_bridge_blinking = false;
 
 // entry sensor variables
-boolean entry_sensor_laststate;
-boolean entry_sensor_currentstate;
+boolean entry_sensor_laststate = 1;
+boolean entry_sensor_currentstate = 1;
 byte entry_sensor_trigger = 0;
 
 // exit sensor variables
-boolean exit_sensor_laststate;
-boolean exit_sensor_currentstate;
+boolean exit_sensor_laststate = 1;
+boolean exit_sensor_currentstate = 1;
 byte exit_sensor_trigger = 0;
+
+// traffic lights
+boolean is_traffic_lights_blinking = false;
+byte traffic_lights_effect_state;
+unsigned long lastrun_traffic_lights;
+
+// misc
+unsigned long alarm;
+
+// motors
+byte bridge_motor_tilt = 45;
+byte traffic_lights_motor_tilt;
+unsigned long bridge_motor_lastrun;
+unsigned long traffic_lights_motor_lastrun;
+
 
 /*
  * Control variable responsable for state of off all system.
  *
  * 10 - sensors 0 and 1 not interrupted, bridge lowered, bridge LEDs in 3-2-1 effect, traffic lights green					<-----
- * 20 - sensor 0 interrupted, bidge lowered, bridge LEDs in 3-2-1 effect, traffic lights in alternative blinking (5s)			 |
+ * 20 - sensor 0 interrupted, bidge lowered, bridge LEDs in all-blink effect, traffic lights in alternative blinking (5s)		 |
  * 30 - state of sensors irrelevant, bridge rising, bridge LEDs in all-blink effect, traffic lights red (until risen)			 |
  * 40 - sensor states irrelevant, bridge risen, bidge LEDs in all-blink effect, traffic lights red (indefinitev)				 |
  * 50 - when both sensors reconnect, bidge lowering, bidge LEDs in all-blink effect, traffic lights red						------
@@ -143,6 +158,7 @@ void bridge_effect(byte mode) {
 }
 
 void setup() {
+	Serial.begin(9600);
 	pinMode(TLG, OUTPUT);
 	pinMode(TLR, OUTPUT);
 	pinMode(BR_2, OUTPUT);
@@ -171,40 +187,71 @@ void loop() {
 	 */
 	delay(10);
 
+
+	// read entry sensor
 	entry_sensor_currentstate = read_sensor(ENTRY_SENSOR);
 
 	// detect entry sensor state change
 	if (entry_sensor_laststate != entry_sensor_currentstate) {
 		entry_sensor_laststate = entry_sensor_currentstate;
 		if (entry_sensor_currentstate == true) {
-//			traffic_ligths(RED);
-//			is_bridge_blinking = false;
-//			bridge_effect(BRIDGEALLON);
 			entry_sensor_trigger = RISING_EDGE;
-
 		} else {
-//			traffic_ligths(GREEN);
-//			is_bridge_blinking = true;
-//			control = 20;
-			// bridge_effect(OFF);
-			exit_sensor_trigger = FALLING_EDGE;
+			entry_sensor_trigger = FALLING_EDGE;
 		}
 	}
+
+
+	// read exit sensor
+	exit_sensor_currentstate = read_sensor(EXIT_SENSOR);
 
 	// detect exit sensor state change
 	if (exit_sensor_laststate != exit_sensor_currentstate) {
 		exit_sensor_laststate = exit_sensor_currentstate;
 		if (exit_sensor_currentstate == true) {
 			exit_sensor_trigger = RISING_EDGE;
-
 		} else {
 			exit_sensor_trigger = FALLING_EDGE;
 		}
 	}
 
+	// ------------------------------------------------
+	// Logic for state changing
+	// ------------------------------------------------
 
-	// lowered state blinking
-	if (is_bridge_blinking && (millis() - lastrun_bridge > 1000)) {
+	if ((control == 10) && ((entry_sensor_trigger == RISING_EDGE) || (exit_sensor_trigger == RISING_EDGE))) {
+		// sensor 0 or 1 interrupted, bidge lowered -> from state 10 to state 20
+		control = 20;	// bridge LEDs in all-blink effect, traffic lights in alternative blinking (5s)
+		is_bridge_blinking = true;
+		is_traffic_lights_blinking = true;
+		entry_sensor_trigger = EDGE_RESET;
+		exit_sensor_trigger = EDGE_RESET;
+		alarm = millis() + 5000;
+		Serial.println("State No. 20");
+	}
+
+	if ((control == 20) && (millis() > alarm)) {
+		// bridge rising, bridge LEDs in all-blink effect, traffic lights red (until risen)
+		control = 30;
+		bridge_effect_state = BRIDGEALLON;
+		is_traffic_lights_blinking = false;
+		traffic_ligths(RED);
+		bridge_motor_lastrun = millis();
+		Serial.println("State No. 30");
+	}
+
+	if ((control == 30) && (bridge_motor_tilt <= 90) && (millis() - bridge_motor_lastrun > 100)) {
+		Serial.println(bridge_motor_tilt);
+		bridge_motor_tilt++;
+		bridge_motor_lastrun = millis();
+	}
+
+	// ------------------------------------------------
+	// Logic for blinking
+	// ------------------------------------------------
+
+	// bridge blinking
+	if (!is_bridge_blinking && (millis() - lastrun_bridge > 1000)) {
 		if (bridge_effect_state == 1) {
 			bridge_effect_state = 2;
 		} else if (bridge_effect_state == 2) {
@@ -215,7 +262,7 @@ void loop() {
 		bridge_effect(bridge_effect_state);
 		lastrun_bridge = millis();
 	}
-	if (!is_bridge_blinking && (millis() - lastrun_bridge > 1000)) {
+	if (is_bridge_blinking && (millis() - lastrun_bridge > 1000)) {
 		if (bridge_effect_state == OFF) {
 			bridge_effect_state = BRIDGEALLON;
 		} else {
@@ -223,5 +270,16 @@ void loop() {
 		}
 		bridge_effect(bridge_effect_state);
 		lastrun_bridge = millis();
+	}
+
+	// traffic lights blinking
+	if ((is_traffic_lights_blinking) && (millis() - lastrun_traffic_lights > 750)) {
+		if (traffic_lights_effect_state == 1) {
+			traffic_lights_effect_state = 2;
+		} else {
+			traffic_lights_effect_state = 1;
+		}
+		traffic_ligths(traffic_lights_effect_state);
+		lastrun_traffic_lights = millis();
 	}
 }
