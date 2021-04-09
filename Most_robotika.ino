@@ -51,7 +51,6 @@ byte traffic_lights_motor_tilt;
 unsigned long bridge_motor_lastrun;
 unsigned long traffic_lights_motor_lastrun;
 
-
 /*
  * Control variable responsable for state of off all system.
  *
@@ -112,7 +111,7 @@ void traffic_ligths(byte mode) {
  * 2 - in the middle of the bridge
  * 3 - farthest form base of the bridge
  */
-void bridge_effect(byte mode) {
+void bridge_lights(byte mode) {
 	switch (mode) {
 		case 0:
 			digitalWrite(BL_0, LOW);
@@ -171,7 +170,7 @@ void setup() {
 	pinMode(EXIT_SENSOR, OUTPUT);
 	lastrun_bridge = millis();
 	traffic_ligths(GREEN);
-	bridge_effect(OFF);
+	bridge_lights(OFF);
 }
 
 void loop() {
@@ -187,7 +186,6 @@ void loop() {
 	 */
 	delay(10);
 
-
 	// read entry sensor
 	entry_sensor_currentstate = read_sensor(ENTRY_SENSOR);
 
@@ -200,7 +198,6 @@ void loop() {
 			entry_sensor_trigger = FALLING_EDGE;
 		}
 	}
-
 
 	// read exit sensor
 	exit_sensor_currentstate = read_sensor(EXIT_SENSOR);
@@ -227,7 +224,7 @@ void loop() {
 		entry_sensor_trigger = EDGE_RESET;
 		exit_sensor_trigger = EDGE_RESET;
 		alarm = millis() + 5000;
-		Serial.println("State No. 20");
+		Serial.println("State 10 -> 20");
 	}
 
 	if ((control == 20) && (millis() > alarm)) {
@@ -237,15 +234,38 @@ void loop() {
 		is_traffic_lights_blinking = false;
 		traffic_ligths(RED);
 		bridge_motor_lastrun = millis();
-		Serial.println("State No. 30");
+		Serial.println("State 20 -> 30");
 	}
 
-	if ((control == 30) && (bridge_motor_tilt <= 90) && (millis() - bridge_motor_lastrun > 100)) {
-		Serial.println(bridge_motor_tilt);
+	if ((control == 30) && (millis() - bridge_motor_lastrun > 100)) {
 		bridge_motor_tilt++;
+		Serial.println(bridge_motor_tilt);
 		bridge_motor_lastrun = millis();
+		if (bridge_motor_tilt >= 90) {
+			control = 40;
+			Serial.println("State 30 -> 40");
+		}
 	}
 
+	if ((control == 40) && ((entry_sensor_trigger == RISING_EDGE) || (exit_sensor_trigger == RISING_EDGE))) {
+		control = 50;
+		bridge_motor_lastrun = millis();
+		is_traffic_lights_blinking = true;
+		Serial.println("State 40 -> 50");
+	}
+
+	if ((control == 50) && (millis() - bridge_motor_lastrun > 100)) {
+		bridge_motor_tilt--;
+		Serial.println(bridge_motor_tilt);
+		bridge_motor_lastrun = millis();
+		if (bridge_motor_tilt <= 45) {
+			control = 10;
+			is_bridge_blinking = false;
+			is_traffic_lights_blinking = false;
+			traffic_ligths(GREEN);
+			Serial.println("State 50 -> 10");
+		}
+	}
 	// ------------------------------------------------
 	// Logic for blinking
 	// ------------------------------------------------
@@ -259,7 +279,7 @@ void loop() {
 		} else {
 			bridge_effect_state = 1;
 		}
-		bridge_effect(bridge_effect_state);
+		bridge_lights(bridge_effect_state);
 		lastrun_bridge = millis();
 	}
 	if (is_bridge_blinking && (millis() - lastrun_bridge > 1000)) {
@@ -268,7 +288,7 @@ void loop() {
 		} else {
 			bridge_effect_state = OFF;
 		}
-		bridge_effect(bridge_effect_state);
+		bridge_lights(bridge_effect_state);
 		lastrun_bridge = millis();
 	}
 
