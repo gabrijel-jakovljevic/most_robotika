@@ -1,3 +1,5 @@
+#include <Servo.h>
+
 // Naming:
 // BL: B = bridge, L = left
 // TLG:  = traffic light, G = green
@@ -10,6 +12,9 @@
 #define BR_2 A3
 #define BR_1 A4
 #define BR_0 A5
+#define BUZZER 12
+#define BARRIER 10
+#define BRIDGE 9
 
 #define ENTRY_SENSOR 2
 #define EXIT_SENSOR 4
@@ -21,6 +26,8 @@
 #define GREEN 1
 #define OFF 0
 #define BRIDGEALLON 4
+
+Servo servo;
 
 // bridge
 unsigned long lastrun_bridge;
@@ -46,11 +53,17 @@ unsigned long lastrun_traffic_lights;
 unsigned long alarm;
 
 // motors
-byte bridge_motor_tilt = 45;
+byte bridge_motor_tilt = 0;
 byte traffic_lights_motor_tilt;
 unsigned long bridge_motor_lastrun;
 unsigned long traffic_lights_motor_lastrun;
 
+// buzzer
+boolean is_buzzer_beeping = false;
+boolean buzzer_state;
+unsigned long buzzer_lastrun;
+
+byte control = 10;
 /*
  * Control variable responsable for state of off all system.
  *
@@ -60,7 +73,6 @@ unsigned long traffic_lights_motor_lastrun;
  * 40 - sensor states irrelevant, bridge risen, bidge LEDs in all-blink effect, traffic lights red (indefinitev)				 |
  * 50 - when both sensors reconnect, bidge lowering, bidge LEDs in all-blink effect, traffic lights red						------
  */
-byte control = 10;
 
 boolean read_sensor(byte sensor) {
 	// read and debounce sensor
@@ -174,16 +186,6 @@ void setup() {
 }
 
 void loop() {
-	/*	if (millis() - lastrun > 1000) {
-	 if (traffic_state == 1) {
-	 traffic_state = 2;
-	 } else {
-	 traffic_state = 1;
-	 }
-	 traffic_ligths(traffic_state);
-	 lastrun = millis();
-	 }
-	 */
 	delay(10);
 
 	// read entry sensor
@@ -220,6 +222,7 @@ void loop() {
 		// sensor 0 or 1 interrupted, bidge lowered -> from state 10 to state 20
 		control = 20;	// bridge LEDs in all-blink effect, traffic lights in alternative blinking (5s)
 		is_bridge_blinking = true;
+		tone(BUZZER, 1000);
 		is_traffic_lights_blinking = true;
 		entry_sensor_trigger = EDGE_RESET;
 		exit_sensor_trigger = EDGE_RESET;
@@ -232,42 +235,62 @@ void loop() {
 		control = 30;
 		bridge_effect_state = BRIDGEALLON;
 		is_traffic_lights_blinking = false;
+		is_buzzer_beeping = true;
 		traffic_ligths(RED);
 		bridge_motor_lastrun = millis();
 		Serial.println("State 20 -> 30");
+		servo.attach(BRIDGE);
+		servo.write(0);
 	}
 
 	if ((control == 30) && (millis() - bridge_motor_lastrun > 100)) {
 		bridge_motor_tilt++;
+		servo.write(bridge_motor_tilt);
 		Serial.println(bridge_motor_tilt);
 		bridge_motor_lastrun = millis();
 		if (bridge_motor_tilt >= 90) {
 			control = 40;
 			Serial.println("State 30 -> 40");
+			servo.detach();
+			is_buzzer_beeping = false;
+			noTone(BUZZER);
 		}
 	}
 
 	if ((control == 40) && ((entry_sensor_trigger == RISING_EDGE) || (exit_sensor_trigger == RISING_EDGE))) {
+		control = 45;
+		tone(BUZZER, 1000);
+		Serial.println("State 40 -> 45");
+		alarm = millis() + 5000;
+	}
+
+	if ((control == 45) && (millis() > alarm)) {
 		control = 50;
+		is_buzzer_beeping = true;
 		bridge_motor_lastrun = millis();
 		is_traffic_lights_blinking = true;
-		Serial.println("State 40 -> 50");
+		Serial.println("State 45 -> 50");
+		servo.attach(9);
 	}
 
 	if ((control == 50) && (millis() - bridge_motor_lastrun > 100)) {
 		bridge_motor_tilt--;
 		Serial.println(bridge_motor_tilt);
+		servo.write(bridge_motor_tilt);
 		bridge_motor_lastrun = millis();
-		if (bridge_motor_tilt <= 45) {
+		if (bridge_motor_tilt <= 0) {
 			control = 10;
 			is_bridge_blinking = false;
 			is_traffic_lights_blinking = false;
 			traffic_ligths(GREEN);
+			is_buzzer_beeping = false;
+			noTone(BUZZER);
+			servo.detach();
 			Serial.println("State 50 -> 10");
 		}
 	}
 	// ------------------------------------------------
-	// Logic for blinking
+	// Logic for blinking and beeping
 	// ------------------------------------------------
 
 	// bridge blinking
@@ -301,5 +324,17 @@ void loop() {
 		}
 		traffic_ligths(traffic_lights_effect_state);
 		lastrun_traffic_lights = millis();
+	}
+
+	// traffic lights blinking
+	if ((is_buzzer_beeping) && (millis() - buzzer_lastrun > 375)) {
+		if (buzzer_state == 1) {
+			buzzer_state = 0;
+			tone(BUZZER, 1000);
+		} else {
+			buzzer_state = 1;
+			noTone(BUZZER);
+		}
+		buzzer_lastrun = millis();
 	}
 }
