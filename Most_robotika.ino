@@ -227,8 +227,6 @@ void loop() {
 		tone(BUZZER, 1000);
 		is_traffic_lights_blinking = true;
 		is_entry_sensor_entry = entry_sensor_trigger == FALLING_EDGE;
-//		entry_sensor_trigger = EDGE_RESET;
-//		exit_sensor_trigger = EDGE_RESET;
 		alarm = millis() + 5000;
 		Serial.println("State 10 -> 20");
 	}
