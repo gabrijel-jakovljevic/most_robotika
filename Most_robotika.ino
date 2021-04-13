@@ -37,12 +37,12 @@ boolean is_bridge_blinking = false;
 // entry sensor variables
 boolean entry_sensor_laststate = 1;
 boolean entry_sensor_currentstate = 1;
-byte entry_sensor_trigger = 0;
+byte entry_sensor_trigger = EDGE_RESET;
 
 // exit sensor variables
 boolean exit_sensor_laststate = 1;
 boolean exit_sensor_currentstate = 1;
-byte exit_sensor_trigger = 0;
+byte exit_sensor_trigger = EDGE_RESET;
 
 // traffic lights
 boolean is_traffic_lights_blinking = false;
@@ -62,6 +62,8 @@ unsigned long traffic_lights_motor_lastrun;
 boolean is_buzzer_beeping = false;
 boolean buzzer_state;
 unsigned long buzzer_lastrun;
+
+boolean is_entry_sensor_entry = true;
 
 byte control = 10;
 /*
@@ -178,8 +180,8 @@ void setup() {
 	pinMode(BL_2, OUTPUT);
 	pinMode(BL_1, OUTPUT);
 	pinMode(BL_0, OUTPUT);
-	pinMode(ENTRY_SENSOR, INPUT);
-	pinMode(EXIT_SENSOR, OUTPUT);
+	pinMode(ENTRY_SENSOR, INPUT_PULLUP);
+	pinMode(EXIT_SENSOR, INPUT_PULLUP);
 	lastrun_bridge = millis();
 	traffic_ligths(GREEN);
 	bridge_lights(OFF);
@@ -218,14 +220,15 @@ void loop() {
 	// Logic for state changing
 	// ------------------------------------------------
 
-	if ((control == 10) && ((entry_sensor_trigger == RISING_EDGE) || (exit_sensor_trigger == RISING_EDGE))) {
+	if ((control == 10) && ((entry_sensor_trigger == FALLING_EDGE) || (exit_sensor_trigger == FALLING_EDGE))) {
 		// sensor 0 or 1 interrupted, bidge lowered -> from state 10 to state 20
 		control = 20;	// bridge LEDs in all-blink effect, traffic lights in alternative blinking (5s)
 		is_bridge_blinking = true;
 		tone(BUZZER, 1000);
 		is_traffic_lights_blinking = true;
-		entry_sensor_trigger = EDGE_RESET;
-		exit_sensor_trigger = EDGE_RESET;
+		is_entry_sensor_entry = entry_sensor_trigger == FALLING_EDGE;
+//		entry_sensor_trigger = EDGE_RESET;
+//		exit_sensor_trigger = EDGE_RESET;
 		alarm = millis() + 5000;
 		Serial.println("State 10 -> 20");
 	}
@@ -250,14 +253,16 @@ void loop() {
 		bridge_motor_lastrun = millis();
 		if (bridge_motor_tilt >= 90) {
 			control = 40;
-			Serial.println("State 30 -> 40");
-			servo.detach();
 			is_buzzer_beeping = false;
 			noTone(BUZZER);
+			entry_sensor_trigger = EDGE_RESET;
+			exit_sensor_trigger = EDGE_RESET;
+			servo.detach();
+			Serial.println("State 30 -> 40");
 		}
 	}
 
-	if ((control == 40) && ((entry_sensor_trigger == RISING_EDGE) || (exit_sensor_trigger == RISING_EDGE))) {
+	if ((control == 40) && ((!is_entry_sensor_entry && entry_sensor_trigger == RISING_EDGE) || (is_entry_sensor_entry && exit_sensor_trigger == RISING_EDGE))) {
 		control = 45;
 		tone(BUZZER, 1000);
 		Serial.println("State 40 -> 45");
@@ -285,6 +290,8 @@ void loop() {
 			traffic_ligths(GREEN);
 			is_buzzer_beeping = false;
 			noTone(BUZZER);
+			entry_sensor_trigger = EDGE_RESET;
+			exit_sensor_trigger = EDGE_RESET;
 			servo.detach();
 			Serial.println("State 50 -> 10");
 		}
