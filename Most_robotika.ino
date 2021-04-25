@@ -66,7 +66,7 @@ unsigned long buzzer_lastrun;
 
 boolean is_entry_sensor_entry = true;
 
-byte control = 0;
+byte control = 10;
 /*
  * Control variable responsable for state of off all system.
  *
@@ -172,7 +172,9 @@ void bridge_lights(byte mode) {
 }
 
 void setup() {
-	Serial.begin(9600);
+//	Serial.begin(9600);
+//	delay(1000);
+//	Serial.println("Setup");
 	pinMode(TLG, OUTPUT);
 	pinMode(TLR, OUTPUT);
 	pinMode(BR_2, OUTPUT);
@@ -183,9 +185,24 @@ void setup() {
 	pinMode(BL_0, OUTPUT);
 	pinMode(ENTRY_SENSOR, INPUT_PULLUP);
 	pinMode(EXIT_SENSOR, INPUT_PULLUP);
+	servo.attach(BRIDGE);
+	servo.write(0);
+	delay(50);
+	servo1.attach(BARRIER);
+	servo1.write(180);
+	delay(1000);
+	traffic_ligths(RED);
+	bridge_lights(BRIDGEALLON);
+	delay(3000);
+	for (traffic_lights_motor_tilt = 180; traffic_lights_motor_tilt >= 90; traffic_lights_motor_tilt--) {
+		servo1.write(traffic_lights_motor_tilt);
+		delay(10);
+	}
 	lastrun_bridge = millis();
 	traffic_ligths(GREEN);
 	bridge_lights(OFF);
+	servo.detach();
+	servo1.detach();
 }
 
 void loop() {
@@ -221,19 +238,6 @@ void loop() {
 	// Logic for state changing
 	// ------------------------------------------------
 
-	if (control == 0) {
-		delay(10);
-		servo1.attach(BARRIER);
-		servo.attach(BRIDGE);
-		servo1.write(90);
-		traffic_lights_motor_tilt = 90;
-		bridge_motor_tilt = 0;
-		servo.write(0);
-		servo.detach();
-		servo1.detach();
-		control = 10;
-	}
-
 	if ((control == 10) && ((entry_sensor_trigger == FALLING_EDGE) || (exit_sensor_trigger == FALLING_EDGE))) {
 		// sensor 0 or 1 interrupted, bidge lowered -> from state 10 to state 20
 		control = 20;	// bridge LEDs in all-blink effect, traffic lights in alternative blinking (5s)
@@ -242,23 +246,23 @@ void loop() {
 		is_traffic_lights_blinking = true;
 		is_entry_sensor_entry = entry_sensor_trigger == FALLING_EDGE;
 		alarm = millis() + 5000;
-		Serial.println("State 10 -> 20");
+//		Serial.println("State 10 -> 20");
 	}
 
 	if ((control == 20) && (millis() > alarm)) {
 		// bridge rising, bridge LEDs in all-blink effect, traffic lights red (until risen)
 		control = 25;
 		traffic_lights_motor_lastrun = millis();
-		Serial.println("State 20 -> 25");
+//		Serial.println("State 20 -> 25");
 		servo1.attach(BARRIER);
 	}
 
 	if ((control == 25) && (millis() - traffic_lights_motor_lastrun > 100)) {
-		traffic_lights_motor_tilt--;
-		Serial.println(traffic_lights_motor_tilt);
+		traffic_lights_motor_tilt++;
+//		Serial.println(traffic_lights_motor_tilt);
 		servo1.write(traffic_lights_motor_tilt);
 		traffic_lights_motor_lastrun = millis();
-		if (traffic_lights_motor_tilt <= 0) {
+		if (traffic_lights_motor_tilt >= 180) {
 			control = 30;
 			bridge_effect_state = BRIDGEALLON;
 			is_traffic_lights_blinking = false;
@@ -266,14 +270,14 @@ void loop() {
 			traffic_ligths(RED);
 			servo1.detach();
 			servo.attach(BRIDGE);
-			Serial.println("State 25 -> 30");
+//			Serial.println("State 25 -> 30");
 		}
 	}
 
 	if ((control == 30) && (millis() - bridge_motor_lastrun > 100)) {
 		bridge_motor_tilt++;
 		servo.write(bridge_motor_tilt);
-		Serial.println(bridge_motor_tilt);
+//		Serial.println(bridge_motor_tilt);
 		bridge_motor_lastrun = millis();
 		if (bridge_motor_tilt >= 180) {
 			control = 40;
@@ -282,14 +286,14 @@ void loop() {
 			entry_sensor_trigger = EDGE_RESET;
 			exit_sensor_trigger = EDGE_RESET;
 			servo.detach();
-			Serial.println("State 30 -> 40");
+//			Serial.println("State 30 -> 40");
 		}
 	}
 
 	if ((control == 40) && ((!is_entry_sensor_entry && entry_sensor_trigger == RISING_EDGE) || (is_entry_sensor_entry && exit_sensor_trigger == RISING_EDGE))) {
 		control = 45;
 		tone(BUZZER, 1000);
-		Serial.println("State 40 -> 45");
+//		Serial.println("State 40 -> 45");
 		alarm = millis() + 5000;
 	}
 
@@ -298,13 +302,13 @@ void loop() {
 		is_buzzer_beeping = true;
 		bridge_motor_lastrun = millis();
 		is_traffic_lights_blinking = true;
-		Serial.println("State 45 -> 50");
+//		Serial.println("State 45 -> 50");
 		servo.attach(BRIDGE);
 	}
 
 	if ((control == 50) && (millis() - bridge_motor_lastrun > 100)) {
 		bridge_motor_tilt--;
-		Serial.println(bridge_motor_tilt);
+//		Serial.println(bridge_motor_tilt);
 		servo.write(bridge_motor_tilt);
 		bridge_motor_lastrun = millis();
 		if (bridge_motor_tilt <= 0) {
@@ -312,26 +316,26 @@ void loop() {
 			servo.detach();
 			servo1.attach(BARRIER);
 			traffic_lights_motor_lastrun = millis();
-			Serial.println("State 50 -> 55");
+			is_buzzer_beeping = false;
+//			Serial.println("State 50 -> 55");
 		}
 	}
 
 	if ((control == 55) && (millis() - traffic_lights_motor_lastrun > 100)) {
-		traffic_lights_motor_tilt++;
-		Serial.println(traffic_lights_motor_tilt);
+		traffic_lights_motor_tilt--;
+//		Serial.println(traffic_lights_motor_tilt);
 		servo1.write(traffic_lights_motor_tilt);
 		traffic_lights_motor_lastrun = millis();
-		if (traffic_lights_motor_tilt >= 90) {
+		if (traffic_lights_motor_tilt <= 90) {
 			is_bridge_blinking = false;
 			is_traffic_lights_blinking = false;
 			traffic_ligths(GREEN);
-			is_buzzer_beeping = false;
 			noTone(BUZZER);
 			entry_sensor_trigger = EDGE_RESET;
 			exit_sensor_trigger = EDGE_RESET;
 			servo1.detach();
 			control = 10;
-			Serial.println("State 55 --> 10");
+//			Serial.println("State 55 --> 10");
 		}
 	}
 	// ------------------------------------------------
